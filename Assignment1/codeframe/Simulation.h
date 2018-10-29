@@ -145,25 +145,32 @@ public:
 
     /** TODO WS1: plots the flow field. */
     virtual void plotVTK(int timeStep) {
-        // TODO WS1: create VTKStencil and respective iterator; iterate stencil
-        //           over _flowField and write flow field information to vtk file
 
-        const int* _N = _parameters.parallel.localSize;
-//        const int *_offset = _parameters.parallel.firstCorner;
+
+        const int *N = _parameters.parallel.localSize;
+        int numProcessors = _parameters.parallel.numProcessors[0] * _parameters.parallel.numProcessors[1] *
+                            _parameters.parallel.numProcessors[2];
+        // const int *_offset = _parameters.parallel.firstCorner;
         std::string prefix = _parameters.vtk.prefix;
         std::ofstream vtkFile;
-        vtkFile.open(
-                "./VTK/" + prefix + "_" + std::to_string(_parameters.parallel.rank) + "_" + std::to_string(timeStep) +
-                ".vtk");
+        if (numProcessors > 1) {
+            vtkFile.open(
+                    "./VTK/" + prefix + "_" + std::to_string(_parameters.parallel.rank) + "_" +
+                    std::to_string(timeStep) +
+                    ".vtk");
+        } else {
+            vtkFile.open(
+                    "./VTK/" + prefix + "_" + std::to_string(timeStep) + ".vtk");
+        }
         vtkFile
-                << "# vtk DataFile Version 2.0\nI need something to put here\nASCII\n\nDATASET STRUCTURED_GRID\nDIMENSIONS ";
-        vtkFile << _N[0] + 1 << " " << _N[1] + 1 << " " << _N[2] + 1 << std::endl;
-        vtkFile << "POINTS " << (_N[0] + 1) * (_N[1] + 1) * (_N[2] + 1) << " float" << std::endl;
+                << "# vtk DataFile Version 2.0\nSomething\nASCII\n\nDATASET STRUCTURED_GRID\nDIMENSIONS ";
+        vtkFile << N[0] + 1 << " " << N[1] + 1 << " " << N[2] + 1 << std::endl;
+        vtkFile << "POINTS " << (N[0] + 1) * (N[1] + 1) * (N[2] + 1) << " float" << std::endl;
 
 
-        for (int k = 2 ; k < _N[2] + 3 ; k++) {
-            for (int j = 2 ; j < _N[1] + 3 ; j++) {
-                for (int i = 2 ; i < _N[0] + 3 ; i++) {
+        for (int k = 2; k < N[2] + 3; k++) {
+            for (int j = 2; j < N[1] + 3; j++) {
+                for (int i = 2; i < N[0] + 3; i++) {
 
                     vtkFile << _parameters.meshsize->getPosX(i, j, k) << " "
                             << _parameters.meshsize->getPosY(i, j, k) << " "

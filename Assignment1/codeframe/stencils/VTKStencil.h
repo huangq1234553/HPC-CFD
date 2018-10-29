@@ -21,9 +21,6 @@ public:
      *
      * @param prefix String with the prefix of the name of the VTK files
      */
-    std::string velocityData = "";
-    std::string pressureData = "";
-    std::string prefix;
 
     VTKStencil(const Parameters &parameters);
 
@@ -49,7 +46,10 @@ public:
      */
     void write(FlowField &flowField, int timeStep);
 
-
+private:
+    std::string _velocityData = "";
+    std::string _pressureData = "";
+    std::string _prefix;
 };
 
 #endif

@@ -5,21 +5,25 @@
 
 
 VTKStencil::VTKStencil(const Parameters &parameters) : FieldStencil<FlowField>(parameters),
-                                                       prefix(_parameters.vtk.prefix) {}
+                                                       _prefix(_parameters.vtk.prefix) {}
 
+// Stores all output in strings in the VTKStencil object. Prints all information with headers at once after iterating
+// over the flowField
 void VTKStencil::apply(FlowField &flowField, int i, int j) {
+
     const int obstacle = flowField.getFlags().getValue(i, j);
-    int _Nx = _parameters.parallel.localSize[0], _Ny = _parameters.parallel.localSize[1];
-    if (i > 1 && j > 1 && i < _Nx + 3 && j < _Ny + 3) {
+    int Nx = _parameters.parallel.localSize[0], Ny = _parameters.parallel.localSize[1];
+    //    Identifies if current cell is a fluid cell, outputs 0 otherwise
+    if (i > 1 && j > 1 && i < Nx + 3 && j < Ny + 3) {
         if ((obstacle & OBSTACLE_SELF) == 0) {
             FLOAT pressure;
             FLOAT velocity[2];
             flowField.getPressureAndVelocity(pressure, velocity, i, j);
-            pressureData = pressureData + "\n" + std::to_string(pressure);
-            velocityData = velocityData + "\n" + std::to_string(velocity[0]) + " " + std::to_string(velocity[1]) + " 0";
+            _pressureData = _pressureData + "\n" + std::to_string(pressure);
+            _velocityData = _velocityData + "\n" + std::to_string(velocity[0]) + " " + std::to_string(velocity[1]) + " 0";
         } else {
-            pressureData = pressureData + "0\n";
-            velocityData = velocityData + "0 0 0\n";
+            _pressureData = _pressureData + "0\n";
+            _velocityData = _velocityData + "0 0 0\n";
         }
     }
 }
@@ -27,36 +31,47 @@ void VTKStencil::apply(FlowField &flowField, int i, int j) {
 
 void VTKStencil::apply(FlowField &flowField, int i, int j, int k) {
     const int obstacle = flowField.getFlags().getValue(i, j, k);
-    int _Nx = _parameters.parallel.localSize[0], _Ny = _parameters.parallel.localSize[1], _Nz = _parameters.parallel.localSize[2];
-    if (i > 1 && j > 1 && k > 1 && i < _Nx + 3 && j < _Ny + 3 && k < _Nz + 3) {
+    int Nx = _parameters.parallel.localSize[0], Ny = _parameters.parallel.localSize[1], Nz = _parameters.parallel.localSize[2];
+    //    Identifies if current cell is a fluid cell, outputs 0 otherwise
+    if (i > 1 && j > 1 && k > 1 && i < Nx + 3 && j < Ny + 3 && k < Nz + 3) {
         if ((obstacle & OBSTACLE_SELF) == 0) {
             FLOAT pressure;
             FLOAT velocity[3];
             flowField.getPressureAndVelocity(pressure, velocity, i, j, k);
-            pressureData = pressureData + std::to_string(pressure) + "\n";
-            velocityData = velocityData + std::to_string(velocity[0]) + " " + std::to_string(velocity[1]) + " " +
+            _pressureData = _pressureData + std::to_string(pressure) + "\n";
+            _velocityData = _velocityData + std::to_string(velocity[0]) + " " + std::to_string(velocity[1]) + " " +
                            std::to_string(velocity[2]) + "\n";
         } else {
-            pressureData = pressureData + "0\n";
-            velocityData = velocityData + "0 0 0\n";
+            _pressureData = _pressureData + "0\n";
+            _velocityData = _velocityData + "0 0 0\n";
         }
     }
 }
 
 void VTKStencil::write(FlowField &flowField, int timeStep) {
     std::ofstream vtkFile;
-    int _Nx = _parameters.parallel.localSize[0], _Ny = _parameters.parallel.localSize[1], _Nz = _parameters.parallel.localSize[2];
-    int _cellTotal = _Nx * _Ny * _Nz;
-    vtkFile.open("./VTK/" + prefix + "_" + std::to_string(_parameters.parallel.rank) + "_" + std::to_string(timeStep) +
-                 ".vtk",
-                 std::ios::app);
+    int Nx = _parameters.parallel.localSize[0], Ny = _parameters.parallel.localSize[1], Nz = _parameters.parallel.localSize[2];
+    int numProcesses = _parameters.parallel.numProcessors[0] * _parameters.parallel.numProcessors[1] *
+                       _parameters.parallel.numProcessors[2];
+    int _cellTotal = Nx * Ny * Nz;
+    if (numProcesses > 1) {
+        vtkFile.open(
+                "./VTK/" + _prefix + "_" + std::to_string(_parameters.parallel.rank) + "_" + std::to_string(timeStep) +
+                ".vtk",
+                std::ios::app);
+    } else {
+        vtkFile.open("./VTK/" + _prefix + "_" + std::to_string(timeStep) +
+                     ".vtk",
+                     std::ios::app);
+    }
+
     vtkFile << "\n\nCELL_DATA " + std::to_string(_cellTotal) + "\nSCALARS pressure float 1\nLOOKUP_TABLE default\n";
-    vtkFile << pressureData;
+    vtkFile << _pressureData;
     vtkFile << "\n\nVECTORS velocity float\n";
-    vtkFile << velocityData;
+    vtkFile << _velocityData;
     vtkFile.close();
 
-    pressureData = "";
-    velocityData = "";
+    _pressureData = "";
+    _velocityData = "";
     std::cout << "Printing VTK for timestep " << timeStep << std::endl;
 }

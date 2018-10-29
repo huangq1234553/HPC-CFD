@@ -2,15 +2,14 @@ cmake_minimum_required(VERSION 3.12)
 project(codeframe)
 
 set(CMAKE_CXX_STANDARD 14)
-
-include_directories(.)
-include_directories(3rdparty)
-include_directories(3rdparty/tinyxml2)
+list(APPEND CMAKE_MODULE_PATH "cmake-build-debug")
 include_directories(parallelManagers)
 include_directories(solvers)
 include_directories(stencils)
-include_directories(/home/keefe/petsc-3.3-p7/arch-linux2-c-debug/include)
-include_directories(/home/keefe/petsc-3.3-p7/include)
+include_directories(${PETSC_INCLUDES})
+link_libraries(${PETSC_LIBRARIES})
+#include_directories(/home/keefe/petsc-3.3-p7/arch-linux2-c-debug/include)
+#include_directories(/home/keefe/petsc-3.3-p7/include)
 include_directories(/usr/lib/x86_64-linux-gnu/openmpi/include)
 
 add_executable(codeframe
